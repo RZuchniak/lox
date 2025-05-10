@@ -1,0 +1,51 @@
+package lox;
+
+enum TokenType {
+	// Single-character tokens.
+	LEFT_BRACKET,
+	RIGHT_BRACKET,
+	LEFT_SQUIGLY,
+	RIGHT_SQUIGLY,
+	COMMA,
+	DOT,
+	MINUS,
+	PLUS,
+	SEMICOLON,
+	SLASH,
+	STAR,
+
+	// One of two character tokens
+	NOT,
+	NOT_EQUAL,
+	EQUAL,
+	DOUBLE_EQUAL,
+	GREATER,
+	GREATER_EQUAL,
+	LESS,
+	LESS_EQUAL,
+
+	// Literals.
+	IDENTIFIER,
+	STRING,
+	NUMBER,
+
+	// Keywords.
+	AND,
+	CLASS,
+	ELSE,
+	FALSE,
+	FUN,
+	FOR,
+	IF,
+	NIL,
+	OR,
+	PRINT,
+	RETURN,
+	SUPER,
+	THIS,
+	TRUE,
+	VAR,
+	WHILE,
+
+	EOF
+}
