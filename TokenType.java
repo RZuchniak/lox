@@ -1,5 +1,3 @@
-package lox;
-
 enum TokenType {
 	// Single-character tokens.
 	LEFT_BRACKET,

@@ -1,0 +1,147 @@
+import com.apple.laf.resources.aqua;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+class Scanner {
+	private final String source;
+	private final List<Token> tokens = new ArrayList<>();
+
+	private int start = 0;
+	private int current = 0;
+	private int line = 1;
+
+	Scanner(String source) { this.source = source; }
+
+	List<Token> scanTokens() {
+		while (!end()) {
+			start = current;
+			scanToken();
+		}
+
+		tokens.add(new Token(TokenType.EOF, "", null, line));
+		return tokens;
+	}
+
+	private boolean end() { return current >= source.length(); }
+
+	private void scanToken() {
+		char c = advance();
+		switch (c) {
+		case '(':
+			addToken(TokenType.LEFT_BRACKET);
+			break;
+		case ')':
+			addToken(TokenType.RIGHT_BRACKET);
+			break;
+		case '{':
+			addToken(TokenType.LEFT_SQUIGLY);
+			break;
+		case '}':
+			addToken(TokenType.RIGHT_SQUIGLY);
+			break;
+		case ',':
+			addToken(TokenType.COMMA);
+			break;
+		case '.':
+			addToken(TokenType.DOT);
+			break;
+		case '-':
+			addToken(TokenType.MINUS);
+			break;
+		case '+':
+			addToken(TokenType.PLUS);
+			break;
+		case ';':
+			addToken(TokenType.SEMICOLON);
+			break;
+		case '*':
+			addToken(TokenType.STAR);
+			break;
+		case '!':
+			addToken(match('=') ? TokenType.NOT_EQUAL : TokenType.NOT);
+			break;
+		case '=':
+			addToken(match('=') ? TokenType.DOUBLE_EQUAL : TokenType.EQUAL);
+			break;
+		case '<':
+			addToken(match('=') ? TokenType.LESS_EQUAL : TokenType.LESS);
+			break;
+		case '>':
+			addToken(match('=') ? TokenType.GREATER_EQUAL : TokenType.GREATER);
+			break;
+		case '/':
+			if (match('/')) {
+				while (peek() != '\n' && !end())
+					advance();
+			} else {
+				addToken(TokenType.SLASH);
+			}
+			break;
+		case ' ':
+		case '\r':
+		case '\t':
+			break;
+		case '\n':
+			line++;
+			break;
+		case '"':
+			string();
+			break;
+
+		default:
+			if (isDigit(c)) {
+				number();
+			} else {
+				Lox.error(line, "Unexpected character.");
+				break;
+			}
+		}
+	}
+
+	private void string() {
+		while (peek() != '"' && !end()) {
+			if (peek() == '\n')
+				line++;
+			advance();
+		}
+
+		if (end()) {
+			Lox.error(line, "Unterminated string.");
+			return;
+		}
+
+		advance();
+
+		String value = source.substring(start + 1, current - 1);
+		addToken(TokenType.STRING, value);
+	}
+
+	private boolean match(char expected) {
+		if (end())
+			return false;
+		if (source.charAt(current) != expected)
+			return false;
+
+		current++;
+		return true;
+	}
+
+	private char peek() {
+		if (end())
+			return '\0';
+		return source.charAt(current);
+	}
+
+	private boolean isDigit(char c) { return c <= '0' && c <= '9'; }
+
+	private char advance() { return source.charAt(current++); }
+
+	private void addToken(TokenType type) { addToken(type, null); }
+
+	private void addToken(TokenType type, Object literal) {
+		String text = source.substring(start, current);
+		tokens.add(new Token(type, text, literal, line));
+	}
+}
