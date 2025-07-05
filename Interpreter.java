@@ -2,6 +2,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
+
 	private Environment environment = new Environment();
 
 	void interpret(List<Stmt> statements) {
@@ -23,11 +24,9 @@ class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
 	public Object visitLogicalExpr(Expr.Logical expr) {
 		Object left = evaluate(expr.left);
 		if (expr.operator.type == TokenType.OR) {
-			if (isTruthy(left))
-				return left;
+			if (isTruthy(left)) return left;
 		} else {
-			if (!isTruthy(left))
-				return left;
+			if (!isTruthy(left)) return left;
 		}
 		return evaluate(expr.right);
 	}
@@ -37,11 +36,11 @@ class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
 		Object right = evaluate(expr.right);
 
 		switch (expr.operator.type) {
-		case NOT:
-			return !isTruthy(right);
-		case MINUS:
-			checkNumberOperand(expr.operator, right);
-			return -(double)right;
+			case NOT:
+				return !isTruthy(right);
+			case MINUS:
+				checkNumberOperand(expr.operator, right);
+				return -(double) right;
 		}
 
 		return null;
@@ -53,38 +52,34 @@ class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
 	}
 
 	private void checkNumberOperand(Token operator, Object operand) {
-		if (operand instanceof Double)
-			return;
+		if (operand instanceof Double) return;
 		throw new RuntimeError(operator, "Operand must be a number");
 	}
 
-	private void checkNumberOperands(Token operator, Object left,
-									 Object right) {
-		if (left instanceof Double && right instanceof Double)
-			return;
+	private void checkNumberOperands(
+		Token operator,
+		Object left,
+		Object right
+	) {
+		if (left instanceof Double && right instanceof Double) return;
 		throw new RuntimeError(operator, "Operands must be numbers");
 	}
 
 	private boolean isTruthy(Object object) {
-		if (object == null)
-			return false;
-		if (object instanceof Boolean)
-			return (boolean)object;
+		if (object == null) return false;
+		if (object instanceof Boolean) return (boolean) object;
 		return true;
 	}
 
 	private boolean isEqual(Object a, Object b) {
-		if (a == null & b == null)
-			return true;
-		if (a == null)
-			return false;
+		if ((a == null) & (b == null)) return true;
+		if (a == null) return false;
 
 		return a.equals(b);
 	}
 
 	private String stringify(Object object) {
-		if (object == null)
-			return "nil";
+		if (object == null) return "nil";
 
 		if (object instanceof Double) {
 			String text = object.toString();
@@ -101,9 +96,13 @@ class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
 		return evaluate(expr.expression);
 	}
 
-	private Object evaluate(Expr expr) { return expr.accept(this); }
+	private Object evaluate(Expr expr) {
+		return expr.accept(this);
+	}
 
-	private void execute(Stmt stmt) { stmt.accept(this); }
+	private void execute(Stmt stmt) {
+		stmt.accept(this);
+	}
 
 	void executeBlock(List<Stmt> statements, Environment environment) {
 		Environment previous = this.environment;
@@ -178,47 +177,64 @@ class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
 		Object right = evaluate(expr.right);
 
 		switch (expr.operator.type) {
-		case GREATER:
-			checkNumberOperands(expr.operator, left, right);
-			return (double)left > (double)right;
-		case GREATER_EQUAL:
-			checkNumberOperands(expr.operator, left, right);
-			return (double)left >= (double)right;
-		case LESS:
-			checkNumberOperands(expr.operator, left, right);
-			return (double)left < (double)right;
-		case LESS_EQUAL:
-			checkNumberOperands(expr.operator, left, right);
-			return (double)left <= (double)right;
-		case MINUS:
-			checkNumberOperands(expr.operator, left, right);
-			return (double)left - (double)right;
-		case PLUS:
-			if (left instanceof Double && right instanceof Double) {
-				return (double)left + (double)right;
-			}
-			if (left instanceof String && right instanceof String) {
-				return (String)left + (String)right;
-			}
-			throw new RuntimeError(
-				expr.operator, "Operands must be two numbers or two strings");
-		case SLASH:
-			checkNumberOperands(expr.operator, left, right);
-			return (double)left / (double)right;
-		case STAR:
-			checkNumberOperands(expr.operator, left, right);
-			return (double)left * (double)right;
-		case NOT_EQUAL:
-			return !isEqual(left, right);
-		case DOUBLE_EQUAL:
-			return isEqual(left, right);
+			case GREATER:
+				checkNumberOperands(expr.operator, left, right);
+				return (double) left > (double) right;
+			case GREATER_EQUAL:
+				checkNumberOperands(expr.operator, left, right);
+				return (double) left >= (double) right;
+			case LESS:
+				checkNumberOperands(expr.operator, left, right);
+				return (double) left < (double) right;
+			case LESS_EQUAL:
+				checkNumberOperands(expr.operator, left, right);
+				return (double) left <= (double) right;
+			case MINUS:
+				checkNumberOperands(expr.operator, left, right);
+				return (double) left - (double) right;
+			case PLUS:
+				if (left instanceof Double && right instanceof Double) {
+					return (double) left + (double) right;
+				}
+				if (left instanceof String && right instanceof String) {
+					return (String) left + (String) right;
+				}
+				throw new RuntimeError(
+					expr.operator,
+					"Operands must be two numbers or two strings"
+				);
+			case SLASH:
+				checkNumberOperands(expr.operator, left, right);
+				return (double) left / (double) right;
+			case STAR:
+				checkNumberOperands(expr.operator, left, right);
+				return (double) left * (double) right;
+			case NOT_EQUAL:
+				return !isEqual(left, right);
+			case DOUBLE_EQUAL:
+				return isEqual(left, right);
 		}
 
 		return null;
 	}
-	
+
 	@Override
 	public Object visitCallExpr(Expr.Call expr) {
-		
+		Object callee = evaluate(expr.callee);
+
+		List<Object> arguments = new ArrayList<>();
+		for (Expr argument : expr.arguments) {
+			arguments.add(evaluate(argument));
+		}
+
+		if (!(callee instanceof LoxCallable)) {
+			throw new RuntimeError(
+				expr.paren,
+				"Can only call functions and classes"
+			);
+		}
+
+		LoxCallable function = (LoxCallable) callee;
+		return function.call(this, arguments);
 	}
 }
