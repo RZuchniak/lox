@@ -3,12 +3,15 @@ import java.util.Arrays;
 import java.util.List;
 
 class Parser {
+
 	private static class ParseError extends RuntimeException {}
 
 	private final List<Token> tokens;
 	private int current = 0;
 
-	Parser(List<Token> tokens) { this.tokens = tokens; }
+	Parser(List<Token> tokens) {
+		this.tokens = tokens;
+	}
 
 	List<Stmt> parse() {
 		List<Stmt> statements = new ArrayList<>();
@@ -18,12 +21,14 @@ class Parser {
 		return statements;
 	}
 
-	private Expr expression() { return assignment(); }
+	private Expr expression() {
+		return assignment();
+	}
 
 	private Stmt declaration() {
 		try {
-			if (match(TokenType.VAR))
-				return varDeclaration();
+			if (match(TokenType.FUN)) return function("function");
+			if (match(TokenType.VAR)) return varDeclaration();
 			return statement();
 		} catch (ParseError error) {
 			synchronize();
@@ -32,16 +37,11 @@ class Parser {
 	}
 
 	private Stmt statement() {
-		if (match(TokenType.FOR))
-			return forStatement();
-		if (match(TokenType.IF))
-			return ifStatement();
-		if (match(TokenType.PRINT))
-			return printStatement();
-		if (match(TokenType.WHILE))
-			return whileStatement();
-		if (match(TokenType.LEFT_SQUIGLY))
-			return new Stmt.Block(block());
+		if (match(TokenType.FOR)) return forStatement();
+		if (match(TokenType.IF)) return ifStatement();
+		if (match(TokenType.PRINT)) return printStatement();
+		if (match(TokenType.WHILE)) return whileStatement();
+		if (match(TokenType.LEFT_SQUIGLY)) return new Stmt.Block(block());
 
 		return expressionStatement();
 	}
@@ -73,11 +73,11 @@ class Parser {
 
 		if (increment != null) {
 			body = new Stmt.Block(
-				Arrays.asList(body, new Stmt.Expression(increment)));
+				Arrays.asList(body, new Stmt.Expression(increment))
+			);
 		}
 
-		if (condition == null)
-			condition = new Expr.Literal(true);
+		if (condition == null) condition = new Expr.Literal(true);
 		body = new Stmt.While(condition, body);
 
 		if (initializer != null) {
@@ -131,6 +131,27 @@ class Parser {
 		return new Stmt.Expression(expr);
 	}
 
+	private Stmt.Function function(String kind) {
+		Token name = consume(TokenType.IDENTIFIER, "Expect " + kind + "name");
+		consume(TokenType.LEFT_BRACKET, "Expect '(' after " + kind + " name");
+		List<Token> parameters = new ArrayList<>();
+		if (!check(TokenType.RIGHT_BRACKET)) {
+			do {
+				if (parameters.size() >= 255) {
+					error(peek(), "Can't have more than 255 parameters");
+				}
+				parameters.add(
+					consume(TokenType.IDENTIFIER, "Expect parameter name")
+				);
+			} while (match(TokenType.COMMA));
+		}
+		consume(TokenType.RIGHT_BRACKET, "Expect ')' after parameters");
+
+		consume(TokenType.LEFT_SQUIGLY, "Expect '{' before " + kind + " body");
+		List<Stmt> body = block();
+		return new Stmt.Function(name, parameters, body);
+	}
+
 	private List<Stmt> block() {
 		List<Stmt> statements = new ArrayList<>();
 		while (!check(TokenType.RIGHT_SQUIGLY) && !isAtEnd()) {
@@ -149,7 +170,7 @@ class Parser {
 			Expr value = assignment();
 
 			if (expr instanceof Expr.Variable) {
-				Token name = ((Expr.Variable)expr).name;
+				Token name = ((Expr.Variable) expr).name;
 				return new Expr.Assign(name, value);
 			}
 			error(equals, "Invalid assignment target");
@@ -193,8 +214,14 @@ class Parser {
 	private Expr comparison() {
 		Expr expr = term();
 
-		while (match(TokenType.GREATER, TokenType.GREATER_EQUAL, TokenType.LESS,
-					 TokenType.LESS_EQUAL)) {
+		while (
+			match(
+				TokenType.GREATER,
+				TokenType.GREATER_EQUAL,
+				TokenType.LESS,
+				TokenType.LESS_EQUAL
+			)
+		) {
 			Token operator = previous();
 			Expr right = term();
 			expr = new Expr.Binary(expr, operator, right);
@@ -244,8 +271,10 @@ class Parser {
 				arguments.add(expression());
 			} while (match(TokenType.COMMA));
 		}
-		Token paren =
-			consume(TokenType.RIGHT_BRACKET, "Expect ')' after arguments");
+		Token paren = consume(
+			TokenType.RIGHT_BRACKET,
+			"Expect ')' after arguments"
+		);
 		return new Expr.Call(callee, paren, arguments);
 	}
 
@@ -263,12 +292,9 @@ class Parser {
 	}
 
 	private Expr primary() {
-		if (match(TokenType.FALSE))
-			return new Expr.Literal(false);
-		if (match(TokenType.TRUE))
-			return new Expr.Literal(true);
-		if (match(TokenType.NIL))
-			return new Expr.Literal(null);
+		if (match(TokenType.FALSE)) return new Expr.Literal(false);
+		if (match(TokenType.TRUE)) return new Expr.Literal(true);
+		if (match(TokenType.NIL)) return new Expr.Literal(null);
 
 		if (match(TokenType.NUMBER, TokenType.STRING)) {
 			return new Expr.Literal(previous().literal);
@@ -298,29 +324,32 @@ class Parser {
 	}
 
 	private Token consume(TokenType type, String message) {
-		if (check(type))
-			return advance();
+		if (check(type)) return advance();
 
 		throw error(peek(), message);
 	}
 
 	private boolean check(TokenType type) {
-		if (isAtEnd())
-			return false;
+		if (isAtEnd()) return false;
 		return peek().type == type;
 	}
 
 	private Token advance() {
-		if (!isAtEnd())
-			current++;
+		if (!isAtEnd()) current++;
 		return previous();
 	}
 
-	private boolean isAtEnd() { return peek().type == TokenType.EOF; }
+	private boolean isAtEnd() {
+		return peek().type == TokenType.EOF;
+	}
 
-	private Token peek() { return tokens.get(current); }
+	private Token peek() {
+		return tokens.get(current);
+	}
 
-	private Token previous() { return tokens.get(current - 1); }
+	private Token previous() {
+		return tokens.get(current - 1);
+	}
 
 	private ParseError error(Token token, String message) {
 		Lox.error(token, message);
@@ -331,19 +360,18 @@ class Parser {
 		advance();
 
 		while (!isAtEnd()) {
-			if (previous().type == TokenType.SEMICOLON)
-				return;
+			if (previous().type == TokenType.SEMICOLON) return;
 
 			switch (peek().type) {
-			case CLASS:
-			case FUN:
-			case VAR:
-			case FOR:
-			case IF:
-			case WHILE:
-			case PRINT:
-			case RETURN:
-				return;
+				case CLASS:
+				case FUN:
+				case VAR:
+				case FOR:
+				case IF:
+				case WHILE:
+				case PRINT:
+				case RETURN:
+					return;
 			}
 			advance();
 		}
