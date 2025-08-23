@@ -17,7 +17,15 @@ class Resolver implements Expr.Visitor<Void>, Stmt.Visitor<Void> {
 		NONE,
 		FUNCTION,
 		METHOD,
+		INITIALIZER,
 	}
+
+	private enum ClassType {
+		None,
+		Class,
+	}
+
+	private ClassType currentClass = ClassType.None;
 
 	void resolve(List<Stmt> statements) {
 		for (Stmt statement : statements) {
@@ -35,12 +43,25 @@ class Resolver implements Expr.Visitor<Void>, Stmt.Visitor<Void> {
 
 	@Override
 	public Void visitClassStmt(Stmt.Class stmt) {
+		ClassType enclosingType = currentClass;
+		currentClass = ClassType.Class;
+
 		declare(stmt.name);
 		define(stmt.name);
+
+		beginScope();
+		scopes.peek().put("this", true);
+
 		for (Stmt.Function method : stmt.methods) {
 			FunctionType declaration = FunctionType.METHOD;
+			if (method.name.lexeme.equals("init")) {
+				declaration = FunctionType.INITIALIZER;
+			}
 			resolveFunction(method, declaration);
 		}
+		endScope();
+
+		currentClass = enclosingType;
 		return null;
 	}
 
@@ -79,6 +100,12 @@ class Resolver implements Expr.Visitor<Void>, Stmt.Visitor<Void> {
 			Lox.error(stmt.keyword, "Can't return from the top-level code");
 		}
 		if (stmt.value != null) {
+			if (currentFunction == FunctionType.INITIALIZER) {
+				Lox.error(
+					stmt.keyword,
+					"Can't return a value from an initializer"
+				);
+			}
 			resolve(stmt.value);
 		}
 		return null;
@@ -154,6 +181,15 @@ class Resolver implements Expr.Visitor<Void>, Stmt.Visitor<Void> {
 	public Void visitSetExpr(Expr.Set expr) {
 		resolve(expr.value);
 		resolve(expr.object);
+		return null;
+	}
+
+	@Override
+	public Void visitThisExpr(Expr.This expr) {
+		if (currentClass == ClassType.None) {
+			Lox.error(expr.keyword, "Can't use 'this' outside of a class");
+		}
+		resolveLocal(expr, expr.keyword);
 		return null;
 	}
 
